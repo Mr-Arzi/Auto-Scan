@@ -1,3 +1,4 @@
 # Auto-Scan
 
-prueba master 1
+prueba master 1.2
+
