@@ -12,7 +12,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    Future.delayed(const Duration(milliseconds: 1800), () {
       if (mounted) context.go('/login');
     });
   }
@@ -20,29 +20,27 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 👇 Imagen de prueba
-            Image.asset(
-              'assets/images/logo_autoscan.png',
-              height: 120,
-            ),
-            const SizedBox(height: 24),
-            // 👇 Texto con tipografía Inter
-            const Text(
-              'Bienvenido a Auto-Scan',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFB71C1C), // rojo oscuro
+              Color(0xFFD32F2F), // rojo brillante
+            ],
+            stops: [0.4, 0.4], // corte diagonal
+          ),
+        ),
+        child: Center(
+          child: Image.asset(
+            'assets/images/logo_autoscan.png',
+            height: 200,
+          ),
         ),
       ),
     );
   }
 }
-
