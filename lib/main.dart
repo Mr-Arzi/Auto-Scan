@@ -1,7 +1,9 @@
+import 'package:auto_scan_app/app.dart';
 import 'package:flutter/material.dart';
 
+
 void main() {
-  runApp(const MyApp());
+  runApp(const AutoScanApp());
 }
 
 class MyApp extends StatelessWidget {
