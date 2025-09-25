@@ -19,8 +19,30 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Auto-Scan • Splash')),
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // 👇 Imagen de prueba
+            Image.asset(
+              'assets/images/logo_autoscan.png',
+              height: 120,
+            ),
+            const SizedBox(height: 24),
+            // 👇 Texto con tipografía Inter
+            const Text(
+              'Bienvenido a Auto-Scan',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
+
