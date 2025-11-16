@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/services/service_locator.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,15 +44,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // TODO: conectar con AuthService (mock real luego)
-    await Future.delayed(const Duration(milliseconds: 700));
+    final user = await authService.login(
+      _emailCtrl.text.trim(),
+      _passCtrl.text.trim(),
+    );
 
     if (!mounted) return;
     setState(() => _isSubmitting = false);
 
-    // Navega a Home si “autenticó”
-    context.go('/home');
+    if (user != null) {
+      // ✅ Credenciales correctas → Home
+      context.go('/home');
+    } else {
+      // ❌ Credenciales incorrectas → mostramos error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Credenciales incorrectas'),
+        ),
+      );
+    }
   }
+  
 
   @override
   Widget build(BuildContext context) {
