@@ -31,15 +31,21 @@ class AppTheme {
 
       // Estilo de botones
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: brand,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(12)),
-          ),
-        ),
-      ),
+  style: ElevatedButton.styleFrom(
+    // Antes:
+    // minimumSize: const Size(double.infinity, 48),
+
+    // Ahora: solo fijamos la altura, NO el ancho
+    minimumSize: const Size(0, 48),        // o:
+    // minimumSize: const Size.fromHeight(48),
+
+    // deja lo demás como lo tengas
+    // backgroundColor: AppTheme.brand,
+    // foregroundColor: Colors.white,
+    // shape: RoundedRectangleBorder(...),
+  ),
+),
+
     );
   }
 }
