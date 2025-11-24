@@ -1,4 +1,4 @@
-package com.example.auto_scan_app
+package com.autoscan.app
 
 import io.flutter.embedding.android.FlutterActivity
 
