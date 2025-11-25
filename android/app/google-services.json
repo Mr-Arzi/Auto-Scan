@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "753289904234",
+    "project_id": "autoscan-d2ba8",
+    "storage_bucket": "autoscan-d2ba8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:753289904234:android:7b8460bec0009d7e55ca13",
+        "android_client_info": {
+          "package_name": "com.autoscan.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoEi-NPSZ8EJIAbz2_lfxRM5Nvca-t04U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

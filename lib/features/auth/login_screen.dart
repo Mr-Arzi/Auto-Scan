@@ -38,32 +38,29 @@ class _LoginScreenState extends State<LoginScreen> {
     return null;
   }
 
-  Future<void> _submit() async {
-    final isValid = _formKey.currentState?.validate() ?? false;
-    if (!isValid) return;
+ Future<void> _submit() async {
+  final isValid = _formKey.currentState?.validate() ?? false;
+  if (!isValid) return;
 
-    setState(() => _isSubmitting = true);
+  setState(() => _isSubmitting = true);
 
-    final user = await authService.login(
-      _emailCtrl.text.trim(),
-      _passCtrl.text.trim(),
+  final user = await authService.login(
+    _emailCtrl.text.trim(),
+    _passCtrl.text.trim(),
+  );
+
+  if (!mounted) return;
+  setState(() => _isSubmitting = false);
+
+  if (user != null) {
+    context.go('/home');
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Credenciales incorrectas')),
     );
-
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-
-    if (user != null) {
-      // ✅ Credenciales correctas → Home
-      context.go('/home');
-    } else {
-      // ❌ Credenciales incorrectas → mostramos error
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Credenciales incorrectas'),
-        ),
-      );
-    }
   }
+}
+
   
 
   @override

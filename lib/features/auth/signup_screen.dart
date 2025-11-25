@@ -2,6 +2,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/services/service_locator.dart';
+
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -58,7 +60,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return null;
   }
 
-  Future<void> _submit() async {
+    Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (!_agree) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -68,17 +70,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     setState(() => _submitting = true);
-    // TODO: conectar a API real. Por ahora mock:
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (!mounted) return;
-    setState(() => _submitting = false);
 
-    // Regresar al login con toast
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cuenta creada. Inicia sesión.')),
-    );
-    context.go('/login');
+    try {
+      final user = await authService.signup(
+        _nameCtrl.text.trim(),
+        _emailCtrl.text.trim(),
+        _passCtrl.text.trim(),
+      );
+
+      if (!mounted) return;
+      setState(() => _submitting = false);
+
+      if (user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cuenta creada. Inicia sesión.')),
+        );
+        context.go('/login');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo crear la cuenta')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al registrarte: $e')),
+      );
+    }
   }
+
 
   @override
   Widget build(BuildContext context) {
