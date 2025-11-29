@@ -1,6 +1,8 @@
 // lib/data/repositories/firebase_auth_repository.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/user.dart' as model;
 import 'auth_repository.dart';
@@ -8,7 +10,11 @@ import 'auth_repository.dart';
 class FirebaseAuthRepository implements AuthRepository {
   final fb.FirebaseAuth _auth = fb.FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  // ---------------------------
+  // LOGIN CON CORREO / PASSWORD
+  // ---------------------------
   @override
   Future<model.User?> login(String email, String password) async {
     final cred = await _auth.signInWithEmailAndPassword(
@@ -36,6 +42,9 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
+  // ---------------------------
+  // REGISTRO CON CORREO / PASSWORD
+  // ---------------------------
   @override
   Future<model.User?> signup(String name, String email, String password) async {
     final cred = await _auth.createUserWithEmailAndPassword(
@@ -65,6 +74,59 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
+  // ---------------------------
+  // LOGIN CON GOOGLE
+  // ---------------------------
+  @override
+  Future<model.User?> signInWithGoogle() async {
+    // 1. Abrir selector de cuenta
+    final googleUser = await _googleSignIn.signIn();
+    if (googleUser == null) return null; // usuario canceló
+
+    // 2. Obtener tokens de Google
+    final googleAuth = await googleUser.authentication;
+
+    // 3. Crear credencial para Firebase
+    final credential = fb.GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
+
+    // 4. Iniciar sesión en Firebase
+    final userCred = await _auth.signInWithCredential(credential);
+    final fb.User? user = userCred.user;
+    if (user == null) return null;
+
+    // 5. Crear/actualizar documento en Firestore
+    final docRef = _firestore.collection('users').doc(user.uid);
+    final doc = await docRef.get();
+
+    if (!doc.exists) {
+      await docRef.set({
+        'name': user.displayName ?? '',
+        'email': user.email ?? '',
+        'avatarUrl': user.photoURL,
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await docRef.update({
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    // 6. Devolver modelo de la app
+    return model.User(
+      id: user.uid,
+      name: user.displayName ?? '',
+      email: user.email ?? '',
+      avatarUrl: user.photoURL,
+    );
+  }
+
+  // ---------------------------
+  // OBTENER USUARIO ACTUAL
+  // ---------------------------
   @override
   Future<model.User?> getCurrentUser() async {
     final fb.User? user = _auth.currentUser;
@@ -90,8 +152,12 @@ class FirebaseAuthRepository implements AuthRepository {
     );
   }
 
+  // ---------------------------
+  // LOGOUT
+  // ---------------------------
   @override
   Future<void> logout() async {
+    await _googleSignIn.signOut();
     await _auth.signOut();
   }
 }

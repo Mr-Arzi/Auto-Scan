@@ -12,6 +12,8 @@ import '../../features/camera/camera_screen.dart';
 import '../../features/results/results_screen.dart';
 import '../../features/history/history_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import 'package:auto_scan_app/features/about/about_screen.dart';
+
 
 final GoRouter router = GoRouter(
   initialLocation: '/splash',
@@ -26,6 +28,10 @@ final GoRouter router = GoRouter(
     GoRoute(path: '/results', builder: (_, __) => const ResultsScreen()),
     GoRoute(path: '/history', builder: (_, __) => const HistoryScreen()),
     GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+    GoRoute(
+  path: '/about',
+  builder: (context, state) => const AboutScreen()
+),
   ],
   // (Opcional) logging básico de navegación:
   observers: [

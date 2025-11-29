@@ -1,61 +1,51 @@
 // lib/data/repositories/history_respository.dart
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:firebase_storage/firebase_storage.dart';
 
 import '../models/scan_result.dart';
 
 class HistoryRepository {
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
   final fb.FirebaseAuth _auth;
 
   HistoryRepository({
-    required FirebaseFirestore firestore,
-    required FirebaseStorage storage,
-    required fb.FirebaseAuth auth,
-  })  : _firestore = firestore,
-        _storage = storage,
-        _auth = auth;
+    FirebaseFirestore? firestore,
+    fb.FirebaseAuth? auth,
+  })  : _firestore = firestore ?? FirebaseFirestore.instance,
+        _auth = auth ?? fb.FirebaseAuth.instance;
 
-  /// Guarda la imagen en Storage y el registro en Firestore
+  /// Guarda un escaneo SOLO como texto (sin foto)
   Future<void> saveScan(ScanResult result) async {
     final user = _auth.currentUser;
     if (user == null) {
       throw Exception('No hay usuario autenticado');
     }
 
-    final file = File(result.imagePath);
+    // 👇 Leemos el perfil del usuario para obtener el "name"
+    final userDoc =
+        await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data() ?? {};
 
-    final ref = _storage
-        .ref()
-        .child('scans')
-        .child(user.uid)
-        .child('${result.scannedAt.millisecondsSinceEpoch}.jpg');
-
-    final uploadTask = await ref.putFile(file);
-    final url = await uploadTask.ref.getDownloadURL();
+    final userName =
+        (userData['name'] as String?) ?? user.displayName ?? 'Sin nombre';
 
     await _firestore
         .collection('users')
         .doc(user.uid)
         .collection('history')
         .add({
-      'imageUrl': url,
       'label': result.label,
       'confidence': result.confidence,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(), // fecha + HORA
+      'name': userName, // 👈 aquí guardamos el nombre
     });
   }
 
-  /// Stream para la pantalla de History
+  /// Stream del historial del usuario
   Stream<QuerySnapshot<Map<String, dynamic>>> historyStream() {
     final user = _auth.currentUser;
     if (user == null) {
-      // Si no hay usuario, devolvemos un stream vacío
-      return const Stream<QuerySnapshot<Map<String, dynamic>>>.empty();
+      return const Stream.empty();
     }
 
     return _firestore
@@ -64,5 +54,16 @@ class HistoryRepository {
         .collection('history')
         .orderBy('createdAt', descending: true)
         .snapshots();
+  }
+    Future<void> deleteScan(String docId) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('history')
+        .doc(docId)
+        .delete();
   }
 }

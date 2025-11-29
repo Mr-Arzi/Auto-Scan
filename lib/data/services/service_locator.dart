@@ -23,6 +23,6 @@ final scanService = ScanService();
 // History (lo vamos a implementar abajo)
 final historyRepository = HistoryRepository(
   firestore: firestore,
-  storage: storage,
+ 
   auth: fbAuth,
 );

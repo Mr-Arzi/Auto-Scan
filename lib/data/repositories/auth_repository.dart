@@ -5,6 +5,9 @@ abstract class AuthRepository {
   Future<User?> signup(String name, String email, String password);
   Future<User?> getCurrentUser();
   Future<void> logout();
+
+  // 👇 NUEVO: login con Google
+  Future<User?> signInWithGoogle();
 }
 
 /// Fake para pruebas sin backend
@@ -31,13 +34,11 @@ class FakeAuthRepository implements AuthRepository {
       return _currentUser;
     }
 
-    // credenciales incorrectas
-    return null;
+    return null; // credenciales incorrectas
   }
 
   @override
   Future<User?> signup(String name, String email, String password) async {
-    // por ahora solo devolvemos un user fake
     _currentUser = User(
       id: 'u_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
@@ -54,5 +55,19 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<void> logout() async {
     _currentUser = null;
+  }
+
+  // 👇 Implementación fake del login con Google
+  // (solo para que compile, no abre Google)
+  @override
+  Future<User?> signInWithGoogle() async {
+    // Retorna un usuario "falso" para pruebas
+    await Future.delayed(const Duration(milliseconds: 400));
+    _currentUser = const User(
+      id: 'google_fake',
+      name: 'Google User',
+      email: 'google.fake@autoscan.com',
+    );
+    return _currentUser;
   }
 }

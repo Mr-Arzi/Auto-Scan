@@ -13,7 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
-  final _passCtrl  = TextEditingController();
+  final _passCtrl = TextEditingController();
   bool _obscure = true;
   bool _isSubmitting = false;
 
@@ -37,31 +37,64 @@ class _LoginScreenState extends State<LoginScreen> {
     if ((v ?? '').length < 6) return 'Mínimo 6 caracteres';
     return null;
   }
-
- Future<void> _submit() async {
+Future<void> _submit() async {
   final isValid = _formKey.currentState?.validate() ?? false;
   if (!isValid) return;
 
   setState(() => _isSubmitting = true);
 
-  final user = await authService.login(
-    _emailCtrl.text.trim(),
-    _passCtrl.text.trim(),
-  );
+  try {
+    final user = await authService.login(
+      _emailCtrl.text.trim(),
+      _passCtrl.text.trim(),
+    );
 
-  if (!mounted) return;
-  setState(() => _isSubmitting = false);
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
 
-  if (user != null) {
-    context.go('/home');
-  } else {
+    if (user != null) {
+      context.go('/home');
+      return;
+    }
+
+    // Usuario nulo = login no válido
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Credenciales incorrectas')),
+      const SnackBar(content: Text('Email o contraseña incorrectos')),
+    );
+  } catch (e) {
+    // Firebase arroja errores como: user-not-found, wrong-password
+    setState(() => _isSubmitting = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Email o contraseña incorrectos')),
     );
   }
 }
 
-  
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isSubmitting = true);
+    try {
+      final user = await authService.loginWithGoogle();
+
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+
+      if (user != null) {
+        context.go('/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Inicio de sesión cancelado')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al iniciar con Google: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +118,8 @@ class _LoginScreenState extends State<LoginScreen> {
             // CONTENIDO blanco con formulario
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: Form(
                   key: _formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -119,8 +153,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Password',
                           suffixIcon: IconButton(
-                            onPressed: () => setState(() => _obscure = !_obscure),
-                            icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
+                            onPressed: () =>
+                                setState(() => _obscure = !_obscure),
+                            icon: Icon(_obscure
+                                ? Icons.visibility_off
+                                : Icons.visibility),
                           ),
                         ),
                         validator: _validatePass,
@@ -161,10 +198,33 @@ class _LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             child: _isSubmitting
                                 ? const SizedBox(
-                                    height: 20, width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
                                   )
                                 : const Text('Login'),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Botón Google
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _isSubmitting ? null : _loginWithGoogle,
+                          icon: const Icon(Icons.g_mobiledata, size: 28),
+                          // Si luego quieres usar un logo PNG:
+                          // icon: Image.asset('assets/images/google_logo.png', height: 20),
+                          label: const Text('Continuar con Google'),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                       ),

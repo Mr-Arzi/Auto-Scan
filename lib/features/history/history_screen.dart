@@ -1,8 +1,10 @@
+// lib/features/history/history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../data/services/service_locator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -26,12 +28,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
     }
   }
 
-  Future<void> _downloadAll(List<String> urls) async {
-    if (urls.isEmpty) return;
-    // TODO: integrar descarga real (guardar en galería/compartir).
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Descargando fotos (mock)…')),
-    );
+  String _formatDate(Timestamp? ts) {
+    if (ts == null) return '-';
+    final d = ts.toDate();
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final yyyy = d.year.toString();
+    final hh = d.hour.toString().padLeft(2, '0');
+    final min = d.minute.toString().padLeft(2, '0');
+    return '$dd/$mm/$yyyy  $hh:$min';
   }
 
   @override
@@ -43,108 +48,191 @@ class _HistoryScreenState extends State<HistoryScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.go('/home'),
         ),
-        title: const Text('Fotos'),
+        title: const Text('Historial'),
       ),
       body: SafeArea(
-        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-          stream: historyRepository.historyStream(),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return Center(
-                child: Text('Error: ${snapshot.error}'),
-              );
-            }
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: historyRepository.historyStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-            if (!snapshot.hasData) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
-            }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Error al cargar el historial:\n${snapshot.error}',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
 
-            final docs = snapshot.data!.docs;
+                    final docs = snapshot.data?.docs ?? [];
 
-            // Lista de URLs de imágenes válidas
-            final imageUrls = docs
-                .map((d) => d.data()['imageUrl'] as String?)
-                .whereType<String>()
-                .toList();
+                    if (docs.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'Aún no tienes escaneos guardados.\n'
+                          'Escanea un vehículo y guarda el resultado.',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
 
-            if (imageUrls.isEmpty) {
-              return const Center(
-                child: Text('Todavía no tienes fotos guardadas'),
-              );
-            }
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  // GRID 3 columnas, celdas cuadradas con esquinas redondeadas
-                  Expanded(
-                    child: GridView.builder(
-                      itemCount: imageUrls.length,
+                    return GridView.builder(
+                      itemCount: docs.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
+                        crossAxisCount: 2,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
-                        childAspectRatio: 1,
+                        // Más alto para evitar overflow
+                        childAspectRatio: 1.1,
                       ),
                       itemBuilder: (_, i) {
-                        final url = imageUrls[i];
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            color: const Color(0xFFEDEDED),
-                            child: Image.network(
-                              url,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Center(
-                                child: Icon(
-                                  Icons.broken_image,
-                                  size: 32,
-                                  color: Colors.black26,
+                        final doc = docs[i];
+                        final data = doc.data();
+
+                        final label =
+                            (data['label'] as String?) ?? 'Sin etiqueta';
+
+                        // soporta tanto 'userName' como 'name'
+                        final userName =
+                            (data['userName'] as String?) ??
+                            (data['name'] as String?) ??
+                            'Sin nombre';
+
+                        final createdAt =
+                            data['createdAt'] as Timestamp?;
+
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                          child: Stack(
+                            children: [
+                              // Contenido principal
+                              Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Center(
+                                      child: Icon(
+                                        Icons.directions_car_filled,
+                                        size: 30,
+                                        color: AppTheme.brand,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Center(
+                                      child: Text(
+                                        label,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+
+                                    const Spacer(),
+
+                                    Text(
+                                      'Usuario: $userName',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.schedule,
+                                          size: 12,
+                                          color: Colors.grey,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            _formatDate(createdAt),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
+
+                              // Botón de borrar en esquina superior derecha
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    size: 20,
+                                    color: Colors.red,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  onPressed: () async {
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (_) => AlertDialog(
+                                        title: const Text('Eliminar'),
+                                        content: const Text(
+                                          '¿Quieres borrar este registro del historial?',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            child: const Text('Eliminar'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm == true) {
+                                      await historyRepository.deleteScan(doc.id);
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Botón "Descargar fotos"
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: imageUrls.isEmpty
-                          ? null
-                          : () => _downloadAll(imageUrls),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 246, 143, 59),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('Descargar fotos'),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                    );
+                  },
+                ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
-
-      // Bottom nav (Home / Photos / Profile)
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 1, // 👈 estás en Photos
+        selectedIndex: 1, // estás en History
         onDestinationSelected: (i) => _onNavTap(context, i),
         destinations: const [
           NavigationDestination(
