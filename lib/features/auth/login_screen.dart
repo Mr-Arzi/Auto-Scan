@@ -163,7 +163,7 @@ Future<void> _submit() async {
                         validator: _validatePass,
                       ),
 
-                      const SizedBox(height: 8),
+                      /*const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: TextButton(
@@ -178,7 +178,7 @@ Future<void> _submit() async {
                             style: TextStyle(color: AppTheme.brand),
                           ),
                         ),
-                      ),
+                      ),*/
 
                       const SizedBox(height: 8),
 
@@ -213,21 +213,7 @@ Future<void> _submit() async {
                       const SizedBox(height: 12),
 
                       // Botón Google
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: _isSubmitting ? null : _loginWithGoogle,
-                          icon: const Icon(Icons.g_mobiledata, size: 28),
-                          // Si luego quieres usar un logo PNG:
-                          // icon: Image.asset('assets/images/google_logo.png', height: 20),
-                          label: const Text('Continuar con Google'),
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                        ),
-                      ),
+                    /**/
 
                       const SizedBox(height: 18),
                       const Divider(height: 24),
