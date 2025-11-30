@@ -1,3 +1,5 @@
+// lib/data/services/auth_service.dart
+
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
 
@@ -17,4 +19,9 @@ class AuthService {
   Future<User?> getCurrentUser() => _repo.getCurrentUser();
 
   Future<void> logout() => _repo.logout();
+
+  // 👇 nuevo: login con Google
+  Future<User?> loginWithGoogle() => _repo.signInWithGoogle();
+
+  
 }

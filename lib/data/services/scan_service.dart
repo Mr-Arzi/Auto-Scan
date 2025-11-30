@@ -8,20 +8,21 @@ import 'package:image/image.dart' as img;
 import '../models/scan_result.dart';
 
 class ScanService {
-  // Endpoint directo de TensorFlow Serving en Render
+  // Endpoint de tu modelo en Render
   static const String _endpoint =
-      'https://tf-flower-latest.onrender.com/v1/models/linear-flower:predict';
+      'https://modelo-de-tf-autos.onrender.com/v1/models/reconocimiento-mejorado:predict';
 
   final Dio _dio = Dio();
 
-  // Clases en el orden en que entrenaste el modelo en Python
-  // (daisy, dandelion, roses, sunflowers, tulips)
+  // 👇 Asegúrate que este orden coincide con train_generator.class_indices
   static const List<String> _labels = [
-    'daisy',
-    'dandelion',
-    'roses',
-    'sunflowers',
-    'tulips',
+    'Convertible', // 0
+    'Coupe',       // 1
+    'Hatchback',   // 2
+    'Pickup',      // 3
+    'SUV',         // 4
+    'Sedan',       // 5
+    'Van',         // 6
   ];
 
   Future<ScanResult> predictFromFile(String imagePath) async {
@@ -36,12 +37,49 @@ class ScanService {
       throw Exception('No se pudo decodificar la imagen');
     }
 
-    // 3. Redimensionar a 64x64 (como en tu entrenamiento)
-    final resized = img.copyResize(decoded, width: 64, height: 64);
+    // =====================================================
+    // 🔷 3. RECORTE RECTANGULAR CENTRAL (ej. aspecto 4:3)
+    // =====================================================
+    final originalW = decoded.width;
+    final originalH = decoded.height;
 
-    // 4. Convertir a [64][64][3] normalizado (0–1)
-    final data = List.generate(64, (y) {
-      return List.generate(64, (x) {
+    const targetAspect = 4 / 3; // más ancho que alto, típico para un coche
+    final currentAspect = originalW / originalH;
+
+    int cropW, cropH, offsetX, offsetY;
+
+    if (currentAspect > targetAspect) {
+      // La imagen es "más ancha" de lo que queremos → recortamos lados
+      cropH = originalH;
+      cropW = (cropH * targetAspect).round();
+      offsetX = ((originalW - cropW) / 2).round();
+      offsetY = 0;
+    } else {
+      // La imagen es "más alta" → recortamos arriba y abajo
+      cropW = originalW;
+      cropH = (cropW / targetAspect).round();
+      offsetX = 0;
+      offsetY = ((originalH - cropH) / 2).round();
+    }
+
+    final cropped = img.copyCrop(
+      decoded,
+      x: offsetX,
+      y: offsetY,
+      width: cropW,
+      height: cropH,
+    );
+
+    // =====================================================
+    // 🔳 4. Redimensionar ese rectángulo a 300x300
+    //    (lo que espera tu MobileNetV2)
+    // =====================================================
+    const size = 300;
+    final resized = img.copyResize(cropped, width: size, height: size);
+
+    // 5. Convertir a [300][300][3] normalizado (0–1)
+    final data = List.generate(size, (y) {
+      return List.generate(size, (x) {
         final pixel = resized.getPixel(x, y);
         final r = pixel.r / 255.0;
         final g = pixel.g / 255.0;
@@ -54,7 +92,7 @@ class ScanService {
       'instances': [data], // batch de 1 imagen
     };
 
-    // 5. POST al modelo en Render
+    // 6. POST al modelo en Render
     final response = await _dio.post(
       _endpoint,
       data: jsonEncode(payload),
@@ -69,7 +107,7 @@ class ScanService {
       );
     }
 
-    // 6. Leer predicciones
+    // 7. Leer predicciones
     final body = response.data as Map<String, dynamic>;
     final predictions = body['predictions'] as List;
     if (predictions.isEmpty) {
@@ -77,6 +115,9 @@ class ScanService {
     }
 
     final first = (predictions.first as List).cast<num>();
+
+    // DEBUG: ver qué está regresando el modelo
+    print('Predicciones crudas: $first');
 
     // Buscar el índice de la probabilidad máxima
     var maxIdx = 0;
@@ -88,6 +129,8 @@ class ScanService {
         maxIdx = i;
       }
     }
+
+    print('idx=$maxIdx label=${_labels[maxIdx]} conf=$maxVal');
 
     final label = _labels[maxIdx];
 

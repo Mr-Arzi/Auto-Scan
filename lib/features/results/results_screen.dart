@@ -1,5 +1,6 @@
 // lib/features/results/results_screen.dart
 import 'dart:io';
+import '../../data/services/service_locator.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,14 +26,13 @@ class ResultsScreen extends StatelessWidget {
       return Scaffold(
         appBar: AppBar(title: const Text('Resultados')),
         body: const Center(
-          child: Text('No se recibió ninguna imagen 😥'),
+          child: Text('No se recibió ninguna imagen '),
         ),
       );
     }
 
     Widget image() {
       if (kIsWeb) {
-        // En web, podrías recibir una URL; por ahora asumimos que es un path local
         return Image.network(path, fit: BoxFit.cover);
       } else {
         return Image.file(File(path), fit: BoxFit.cover);
@@ -46,6 +46,7 @@ class ResultsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Imagen escaneada
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
@@ -54,6 +55,8 @@ class ResultsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Resultado del modelo
             FutureBuilder<ScanResult>(
               future: _loadResult(path),
               builder: (context, snapshot) {
@@ -89,7 +92,9 @@ class ResultsScreen extends StatelessWidget {
                 );
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+
+            // Botones
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -99,10 +104,44 @@ class ResultsScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: () => context.go('/history'),
+                  onPressed: () async {
+                    try {
+                      final result = await _loadResult(path);
+                      await historyRepository.saveScan(result);
+
+                      if (context.mounted) {
+                        context.go('/history');
+                      }
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error al guardar: $e')),
+                      );
+                    }
+                  },
                   child: const Text('Guardar'),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // 🚀 BOTÓN NUEVO: regresar al menú
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.go('/home'),
+                icon: const Icon(Icons.home),
+                label: const Text('Volver al menú'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFB71C1C),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+              ),
             ),
           ],
         ),
